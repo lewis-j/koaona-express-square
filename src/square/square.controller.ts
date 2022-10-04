@@ -29,6 +29,7 @@ class SquaresController {
     request: express.Request,
     response: express.Response
   ) => {
+    console.log("getting catalog");
     const itemList = await this.squareService.getCalatog();
     const serializedItem = JSON.stringify(itemList, (_, v) =>
       typeof v === "bigint" ? `${v}` : v

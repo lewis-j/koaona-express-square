@@ -23,7 +23,6 @@ class SquaresController {
   public intializeRoutes() {
     this.router.get("/catalog", corsOptions, this.getCatalog);
     this.router.post("/orders/update", corsOptions, this.update);
-    this.router.route(this.path).post(this.createASquare);
   }
 
   private getCatalog = async (

@@ -4,6 +4,7 @@ import Controller from "intereface/controller.interface";
 import cookieParser from "cookie-parser";
 import errorMiddleware from "./middleware/error.middleware";
 import * as dotenv from "dotenv";
+import * as cors from "cors";
 dotenv.config();
 
 class App {
@@ -23,10 +24,7 @@ class App {
 
   private initializeMiddlewares() {
     this.app.use(bodyParser.json());
-    this.app.use(function (rex, res, next) {
-      res.setHeader("Access-Control-Allow-Origin", process.env.WHITELIST_URL);
-      next();
-    });
+    this.app.use(cors({ origin: process.env.WHITELIST_URL }));
     this.app.use(cookieParser(process.env.COOKIE_SECRET));
 
     // this.app.use(cors(corsOptions));

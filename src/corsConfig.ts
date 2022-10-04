@@ -1,8 +1,10 @@
 import cors from "cors";
+import dotenv from "dotenv";
+dotenv.config();
 
 var corsOptions = {
   origin: function (origin, callback) {
-    const whitelist = ["http://localhost:3000", "https://localhost:3443"];
+    const whitelist = [process.env.WHITELIST_URL];
 
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true);

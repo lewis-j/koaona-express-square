@@ -4,7 +4,7 @@ import Controller from "intereface/controller.interface";
 import cookieParser from "cookie-parser";
 import errorMiddleware from "./middleware/error.middleware";
 import * as dotenv from "dotenv";
-import * as cors from "cors";
+import cors from "cors";
 dotenv.config();
 
 class App {

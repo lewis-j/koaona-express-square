@@ -23,10 +23,7 @@ class SquaresController {
   public intializeRoutes() {
     this.router.get("/catalog", corsOptions, this.getCatalog);
     this.router.post("/orders/update", corsOptions, this.update);
-    this.router
-      .route(this.path)
-      .get(corsOptions, this.getAllItems)
-      .post(this.createASquare);
+    this.router.route(this.path).post(this.createASquare);
   }
 
   private getCatalog = async (
@@ -55,22 +52,22 @@ class SquaresController {
     } else {
       const result = await this.squareService.createOrder(variationId);
       console.log("result from create order::", result);
-      response.cookie("square-order", variationId, { httpOnly: true, })
+      response.cookie("square-order", variationId, { httpOnly: true });
       response.json(result);
     }
   };
 
-  private getAllItems = async (
-    request: express.Request,
-    response: express.Response
-  ) => {
-    const itemList = await this.squareService.getItemList();
-    const serializedItem = JSON.stringify(itemList, (_, v) =>
-      typeof v === "bigint" ? `${v}` : v
-    );
-    const item = JSON.parse(serializedItem);
-    response.send(serializedItem);
-  };
+  // private getAllItems = async (
+  //   request: express.Request,
+  //   response: express.Response
+  // ) => {
+  //   const itemList = await this.squareService.getItemList();
+  //   const serializedItem = JSON.stringify(itemList, (_, v) =>
+  //     typeof v === "bigint" ? `${v}` : v
+  //   );
+  //   const item = JSON.parse(serializedItem);
+  //   response.send(serializedItem);
+  // };
 
   private createASquare = async (
     request: express.Request,

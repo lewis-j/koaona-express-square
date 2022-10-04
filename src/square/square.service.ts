@@ -114,79 +114,79 @@ class SquareService {
 
     return { test: variationId };
   }
-  public async getItemList() {
-    try {
-      const { locationsApi, catalogApi, inventoryApi } = this.client;
-      const res = await catalogApi.listCatalog();
+  // public async getItemList() {
+  //   try {
+  //     const { locationsApi, catalogApi, inventoryApi } = this.client;
+  //     const res = await catalogApi.listCatalog();
 
-      const results = await Promise.all(
-        res.result.objects.map(async ({ itemData }, i) => {
-          let _itemDataResponseObj;
-          if (itemData) {
-            const { name, description, variations, imageIds } = itemData;
-            _itemDataResponseObj = { name, description };
-            _itemDataResponseObj.images = await Promise.all(
-              imageIds.map(async (imageId) => {
-                const catologObject = await catalogApi.retrieveCatalogObject(
-                  imageId
-                );
+  //     const results = await Promise.all(
+  //       res.result.objects.map(async ({ itemData }, i) => {
+  //         let _itemDataResponseObj;
+  //         if (itemData) {
+  //           const { name, description, variations, imageIds } = itemData;
+  //           _itemDataResponseObj = { name, description };
+  //           _itemDataResponseObj.images = await Promise.all(
+  //             imageIds.map(async (imageId) => {
+  //               const catologObject = await catalogApi.retrieveCatalogObject(
+  //                 imageId
+  //               );
 
-                return catologObject.result.object.imageData;
-              })
-            );
+  //               return catologObject.result.object.imageData;
+  //             })
+  //           );
 
-            _itemDataResponseObj.variations = await Promise.all(
-              variations.map(
-                async ({ itemVariationData, id: catalogObjectId }) => {
-                  const res = await inventoryApi.retrieveInventoryCount(
-                    catalogObjectId
-                  );
+  //           _itemDataResponseObj.variations = await Promise.all(
+  //             variations.map(
+  //               async ({ itemVariationData, id: catalogObjectId }) => {
+  //                 const res = await inventoryApi.retrieveInventoryCount(
+  //                   catalogObjectId
+  //                 );
 
-                  const inventory = {
-                    state: res.result.counts[0].state,
-                    quantity: res.result.counts[0].quantity,
-                  };
+  //                 const inventory = {
+  //                   state: res.result.counts[0].state,
+  //                   quantity: res.result.counts[0].quantity,
+  //                 };
 
-                  const imageUrls = await Promise.all(
-                    itemVariationData.imageIds.map(async (imageId) => {
-                      const catologObject =
-                        await catalogApi.retrieveCatalogObject(imageId);
+  //                 const imageUrls = await Promise.all(
+  //                   itemVariationData.imageIds.map(async (imageId) => {
+  //                     const catologObject =
+  //                       await catalogApi.retrieveCatalogObject(imageId);
 
-                      return catologObject.result.object.imageData;
-                    })
-                  );
+  //                     return catologObject.result.object.imageData;
+  //                   })
+  //                 );
 
-                  const { itemId, name, priceMoney } = itemVariationData;
+  //                 const { itemId, name, priceMoney } = itemVariationData;
 
-                  return {
-                    itemId,
-                    name,
-                    priceMoney,
-                    images: imageUrls,
-                    inventory,
-                  };
-                }
-              )
-            );
-          }
+  //                 return {
+  //                   itemId,
+  //                   name,
+  //                   priceMoney,
+  //                   images: imageUrls,
+  //                   inventory,
+  //                 };
+  //               }
+  //             )
+  //           );
+  //         }
 
-          return _itemDataResponseObj;
-        })
-      );
-      const filteredResults = results.filter((result) => result !== undefined);
-      return filteredResults;
-    } catch (error) {
-      if (error instanceof ApiError) {
-        error.result.errors.forEach(function (e) {
-          console.log(e.category);
-          console.log(e.code);
-          console.log(e.detail);
-        });
-      } else {
-        console.log("Unexpected error occurred: ", error);
-      }
-    }
-  }
+  //         return _itemDataResponseObj;
+  //       })
+  //     );
+  //     const filteredResults = results.filter((result) => result !== undefined);
+  //     return filteredResults;
+  //   } catch (error) {
+  //     if (error instanceof ApiError) {
+  //       error.result.errors.forEach(function (e) {
+  //         console.log(e.category);
+  //         console.log(e.code);
+  //         console.log(e.detail);
+  //       });
+  //     } else {
+  //       console.log("Unexpected error occurred: ", error);
+  //     }
+  //   }
+  // }
 }
 
 export default SquareService;

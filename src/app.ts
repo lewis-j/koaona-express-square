@@ -23,6 +23,10 @@ class App {
 
   private initializeMiddlewares() {
     this.app.use(bodyParser.json());
+    this.app.use(function (rex, res, next) {
+      res.setHeader("Access-Control-Allow-Origin", process.env.WHITELIST_URL);
+      next();
+    });
     this.app.use(cookieParser(process.env.COOKIE_SECRET));
 
     // this.app.use(cors(corsOptions));

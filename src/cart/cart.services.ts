@@ -1,29 +1,26 @@
-import { Client, Environment, ApiError } from "square";
+import { Client, Environment, ApiError, OrdersApi } from "square";
 import * as dotenv from "dotenv";
 dotenv.config();
 
 class CartServices {
-  private client: Client;
-  constructor() {
-    this.client = new Client({
-      accessToken: process.env.SQUARE_ACCESS_TOKEN,
-      environment: Environment.Production,
-    });
+  private ordersApi: OrdersApi;
+  private apiErrorHandler;
+  constructor({ ordersApi, ApiErrorHandler }) {
+    this.ordersApi = ordersApi;
+    this.apiErrorHandler = ApiErrorHandler;
   }
 
-  private ApiErrorHandler(error) {
-    if (error instanceof ApiError) {
-      error.result.errors.forEach(function (e) {
-        console.log(e.category);
-        console.log(e.code);
-        console.log(e.detail);
-      });
+  public getOrder = async (OrderId = "OTh0mbkDuNwsTg0hA3o2zVvK7yLZY") => {
+    try {
+      const result = await this.ordersApi.retrieveOrder(OrderId);
+      return result.result.order;
+    } catch (error) {
+      this.apiErrorHandler(error);
+      console.log(error);
     }
-  }
+  };
 
   public async createOrder(variationId, locationId) {
-    const { ordersApi } = this.client;
-
     // const order = {
     //   order: {
     //     locationId: locationId,
@@ -36,7 +33,7 @@ class CartServices {
     //   },
     // };
 
-    const result = await ordersApi.retrieveOrder(
+    const result = await this.ordersApi.retrieveOrder(
       "OTh0mbkDuNwsTg0hA3o2zVvK7yLZY"
     );
 

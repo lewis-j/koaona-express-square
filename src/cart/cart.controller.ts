@@ -6,13 +6,13 @@ class CartController {
 
   private cartService: CartServices;
 
-  constructor() {
+  constructor(square) {
     this.intializeRoutes();
-    this.cartService = new CartServices();
+    this.cartService = new CartServices(square);
   }
 
   public intializeRoutes() {
-    this.router.route(this.path).put(this.update);
+    this.router.route(this.path).get(this.getOrder).put(this.update);
   }
 
   private update = async (
@@ -36,6 +36,17 @@ class CartController {
       response.json(body);
       next();
     }
+  };
+  private getOrder = async (
+    request: express.Request,
+    response: express.Response
+  ) => {
+    const orderId = request.cookies["square-order"];
+    if (!orderId) {
+      response.status(200);
+      response.end();
+    }
+    this.cartService.getOrder(orderId);
   };
 }
 

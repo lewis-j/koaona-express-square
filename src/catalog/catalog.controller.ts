@@ -6,9 +6,9 @@ class CatalogController {
   public router = express.Router();
   private catalogService: CatalogServices;
 
-  constructor() {
+  constructor(square) {
     this.intializeRoutes();
-    this.catalogService = new CatalogService();
+    this.catalogService = new CatalogService(square);
   }
 
   public intializeRoutes() {

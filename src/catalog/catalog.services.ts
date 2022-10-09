@@ -1,4 +1,10 @@
-import { Client, Environment, ApiError } from "square";
+import {
+  Client,
+  Environment,
+  ApiError,
+  InventoryApi,
+  CatalogApi,
+} from "square";
 import * as dotenv from "dotenv";
 dotenv.config();
 import Item, { SquareItem } from "./item.interface";
@@ -10,29 +16,18 @@ interface catalogItem {
 }
 
 class CatalogServices {
-  private client: Client;
-  constructor() {
-    this.client = new Client({
-      accessToken: process.env.SQUARE_ACCESS_TOKEN,
-      environment: Environment.Production,
-    });
-  }
-
-  private ApiErrorHandler(error) {
-    if (error instanceof ApiError) {
-      error.result.errors.forEach(function (e) {
-        console.log(e.category);
-        console.log(e.code);
-        console.log(e.detail);
-      });
-    }
+  private inventoryApi: InventoryApi;
+  private catalogApi: CatalogApi;
+  private ApiErrorHandler;
+  constructor({ catalogApi, inventoryApi, ApiErrorHandler }) {
+    this.catalogApi = catalogApi;
+    this.inventoryApi = inventoryApi;
+    this.ApiErrorHandler = ApiErrorHandler;
   }
 
   public async getCalatog(): Promise<SquareItem[]> {
-    const { locationsApi, catalogApi, inventoryApi } = this.client;
-
     try {
-      const res = await catalogApi.listCatalog(
+      const res = await this.catalogApi.listCatalog(
         undefined,
         "ITEM,IMAGE,CATEGORY"
       );
@@ -71,9 +66,8 @@ class CatalogServices {
 
             const { imageIds, name, priceMoney } = variation.itemVariationData;
 
-            const inventoryItem = await inventoryApi.retrieveInventoryCount(
-              variation.id
-            );
+            const inventoryItem =
+              await this.inventoryApi.retrieveInventoryCount(variation.id);
 
             return [
               ..._filtered,

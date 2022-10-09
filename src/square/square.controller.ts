@@ -21,8 +21,9 @@ class SquaresController {
   }
 
   public intializeRoutes() {
-    this.router.get("/catalog", corsOptions, this.getCatalog);
-    this.router.post("/orders/update", corsOptions, this.update);
+    this.router.get("/catalog", this.getCatalog);
+
+    this.router.post("/orders/update", this.update);
   }
 
   private getCatalog = async (
@@ -40,20 +41,24 @@ class SquaresController {
 
   private update = async (
     request: express.Request,
-    response: express.Response
+    response: express.Response,
+    next
   ) => {
-    const { variationId } = request.body;
-    const headers = response.getHeaders();
-    console.log("headers", { _headers: headers });
-    if (headers["square-order"]) {
-      console.log("square order exist");
-      //const result = await this.squareServices.updateOrder(variationId);
-      response.json({ header: headers["square-order"] });
-    } else {
-      const result = await this.squareService.createOrder(variationId);
-      console.log("result from create order::", result);
-      response.cookie("square-order", variationId, { httpOnly: true });
+    const { variationId, locationId } = request.body;
+    if (false) {
+      console.log("square order exist", request.cookies["square-order"]);
+      const _variationId = request.cookies["square-order"];
+      const result = await this.squareService.updateOrder(variationId);
       response.json(result);
+    } else {
+      const { result, body } = await this.squareService.createOrder(
+        variationId,
+        locationId
+      );
+      console.log("result from create order::", result.order.lineItems);
+      response.cookie("square-order", result.order.id, { httpOnly: true });
+      response.json(body);
+      next();
     }
   };
 

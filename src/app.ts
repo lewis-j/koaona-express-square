@@ -24,8 +24,9 @@ class App {
 
   private initializeMiddlewares() {
     this.app.use(bodyParser.json());
-    console.log("cors whitelisted url", process.env.WHITELIST_URL);
-    this.app.use(cors({ origin: process.env.WHITELIST_URL }));
+    this.app.use(
+      cors({ origin: process.env.WHITELIST_URL, credentials: true })
+    );
     this.app.use(cookieParser(process.env.COOKIE_SECRET));
 
     // this.app.use(cors(corsOptions));

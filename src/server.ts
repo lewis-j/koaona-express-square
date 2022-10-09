@@ -1,6 +1,7 @@
+import CatalogController from "./catalog/catalog.controller";
 import App from "./app";
-import SquaresController from "./square/square.controller";
+import CartController from "./cart/cart.controller";
 
-const app = new App([new SquaresController()], 5000);
+const app = new App([new CatalogController(), new CartController()], 5000);
 
 app.listen();

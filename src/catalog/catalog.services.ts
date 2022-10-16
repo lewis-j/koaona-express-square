@@ -94,7 +94,7 @@ class CatalogServices {
 
         const _price = Number(_variations[0].priceMoney.amount) / 100;
         return {
-          id: item.id,
+          id: _variations[0].id,
           name: name,
           cat: _category,
           desc: description,

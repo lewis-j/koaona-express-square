@@ -10,60 +10,93 @@ class CartServices {
     this.apiErrorHandler = ApiErrorHandler;
   }
 
-  public getOrder = async (OrderId = "OTh0mbkDuNwsTg0hA3o2zVvK7yLZY") => {
+  public mapCartReducer = (lineItems) => {
+    return lineItems.map((item) => ({
+      id: item.catalogObjectId,
+      uid: item.uid,
+      quantity: +item.quantity,
+    }));
+  };
+
+  public getOrder = async (orderId) => {
     try {
-      const result = await this.ordersApi.retrieveOrder(OrderId);
-      return result.result.order;
+      const result = await this.ordersApi.retrieveOrder(orderId);
+      console.log("result in get order", result.result.order.version);
+
+      const cart = this.mapCartReducer(result.result.order.lineItems);
+      return cart;
     } catch (error) {
       this.apiErrorHandler(error);
       console.log(error);
     }
   };
 
-  public async createOrder(variationId, locationId) {
-    // const order = {
-    //   order: {
-    //     locationId: locationId,
-    //     lineItems: [
-    //       {
-    //         catalogObjectId: variationId,
-    //         quantity: "1",
-    //       },
-    //     ],
-    //   },
-    // };
-
-    const result = await this.ordersApi.retrieveOrder(
-      "OTh0mbkDuNwsTg0hA3o2zVvK7yLZY"
-    );
-
-    console.log("result in api", result.result.order.version);
-
-    const orderUpdate = {
+  public async createOrder(lineItems, locationId) {
+    const order = {
       order: {
-        version: result.result.order.version,
         locationId: locationId,
-        lineItems: [
-          {
-            catalogObjectId: "JHO2HWQBYCLDSAZDP5ZH7TPL",
-            quantity: "1",
-          },
-        ],
+        lineItems,
+        state: "DRAFT",
       },
     };
 
-    // const updatedOrder = await ordersApi.updateOrder(
-    //   "OTh0mbkDuNwsTg0hA3o2zVvK7yLZY",
-    //   orderUpdate
-    // );
+    const result = await this.ordersApi.createOrder(order);
 
-    // console.log("update result", updatedOrder);
+    console.log("result in create order api", result.result.order);
 
     return result;
   }
 
-  public async updateOrder(variationId) {
-    console.log("updating order", variationId);
+  public async updateOrder(squareDetails, lineItems, locationId) {
+    console.log("line items", lineItems);
+    const orderUpdate = {
+      order: {
+        version: squareDetails.version,
+        locationId: locationId,
+        lineItems: lineItems,
+      },
+    };
+    try {
+      const updatedOrder = await this.ordersApi.updateOrder(
+        squareDetails.orderId,
+        orderUpdate
+      );
+      return updatedOrder;
+    } catch (error) {
+      this.apiErrorHandler(error);
+      console.log(error);
+    }
+
+    // console.log("update result", updatedOrder);
+  }
+  public async CancelOrder(orderId, locationId, version) {
+    const orderUpdate = {
+      order: {
+        locationId: locationId,
+        version: version,
+        state: "CANCELED",
+      },
+    };
+    return await this.ordersApi.updateOrder(orderId, orderUpdate);
+  }
+  public async draftAllOrders(locationId) {
+    console.log("running draft order");
+    const orders = await this.ordersApi.searchOrders({
+      locationIds: [locationId],
+    });
+    console.log("orders", orders);
+    const orderResults = orders.result.orders.map(async (order, i) => {
+      console.log("order:", i, order.id);
+      const orderUpdate = {
+        order: {
+          locationId: locationId,
+          version: order.version,
+          state: "CANCELED",
+        },
+      };
+      return await this.ordersApi.updateOrder(order.id, orderUpdate);
+    });
+    return await Promise.all(orderResults);
   }
 }
 

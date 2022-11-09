@@ -5,10 +5,8 @@ dotenv.config();
 class SquareClient {
   public client: Client;
   constructor() {
-    this.client = new Client({
-      accessToken: process.env.SQUARE_ACCESS_TOKEN,
-      environment: Environment.Production,
-    });
+    const config = this.getClientConfig();
+    this.client = new Client(config);
   }
 
   public ApiErrorHandler(error) {
@@ -18,6 +16,20 @@ class SquareClient {
         console.log(e.code);
         console.log(e.detail);
       });
+    }
+  }
+
+  private getClientConfig() {
+    if (process.env.ENVIRONMENT === "PRODUCTION") {
+      return {
+        accessToken: process.env.SQUARE_ACCESS_TOKEN,
+        environment: Environment.Production,
+      };
+    } else if (process.env.ENVIRONMENT === "SANDBOX") {
+      return {
+        accessToken: process.env.SQUARE_ACCESS_TOKEN_SANDBOX,
+        environment: Environment.Sandbox,
+      };
     }
   }
 }

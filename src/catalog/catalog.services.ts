@@ -4,10 +4,20 @@ import {
   ApiError,
   InventoryApi,
   CatalogApi,
+  CatalogObject,
+  BatchUpsertCatalogObjectsRequest,
+  CreateCatalogImageRequest,
+  FileWrapper,
 } from "square";
+
+import fs from "fs-extra";
+
+import FormData from "form-data";
+
 import * as dotenv from "dotenv";
 dotenv.config();
 import Item, { SquareItem } from "./item.interface";
+import { v4 as uuidv4 } from "uuid";
 
 interface catalogItem {
   ITEM?: { id: string; customAttributeValues?: any[]; itemData: any }[];
@@ -31,6 +41,10 @@ class CatalogServices {
         undefined,
         "ITEM,IMAGE,CATEGORY"
       );
+
+      const itemData = res.result.objects.map((item) => {
+        return item.itemData;
+      });
 
       const {
         ITEM: items,
@@ -83,14 +97,16 @@ class CatalogServices {
           []
         );
 
-        const _imagesData = imageIds.map((imageId) => {
-          const _image = images.find((image) => image.id === imageId);
-          if (_image) return _image.imageData.url;
-          // return {
-          //   ..._image.imageData,
-          //   name: _image.imageData.name.replace(/_|.jpg/g, " ").trim(),
-          // };
-        });
+        const _imagesData = imageIds
+          ? imageIds.map((imageId) => {
+              const _image = images.find((image) => image.id === imageId);
+              if (_image) return _image.imageData.url;
+              // return {
+              //   ..._image.imageData,
+              //   name: _image.imageData.name.replace(/_|.jpg/g, " ").trim(),
+              // };
+            })
+          : [null];
 
         const _price = Number(_variations[0].priceMoney.amount) / 100;
         return {
@@ -112,6 +128,112 @@ class CatalogServices {
       console.log(error);
     }
   }
+  public async uploadImage(filePath) {
+    //developer.squareup.com/forums/t/only-multipart-form-data-content-type-allowed-but-got-application-x-www-form-urlencoded-node-js-sdk/2296/4
+    https: try {
+      const request: CreateCatalogImageRequest = {
+        idempotencyKey: uuidv4(),
+        image: {
+          id: "#image_id",
+          type: "IMAGE",
+          imageData: {
+            name: "testerImg",
+          },
+        },
+      };
+
+      const fileStream = fs.createReadStream(filePath);
+      const imageFile = new FileWrapper(fileStream, {
+        contentType: "image/jpeg",
+      });
+      const { result } = await this.catalogApi.createCatalogImage(
+        request,
+        imageFile
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  // public async createTestCatalog() {
+  //   const customAttributes: CatalogObject[] = [
+  //     {
+  //       id: "#item_unit",
+  //       type: "CUSTOM_ATTRIBUTE_DEFINITION",
+  //       customAttributeDefinitionData: {
+  //         allowedObjectTypes: ["ITEM", "ITEM_VARIATION"],
+  //         name: "unit",
+  //         type: "STRING",
+  //         key: "item_unit",
+  //       },
+  //     },
+  //     {
+  //       id: "#weight",
+  //       type: "CUSTOM_ATTRIBUTE_DEFINITION",
+  //       customAttributeDefinitionData: {
+  //         allowedObjectTypes: ["ITEM", "ITEM_VARIATION"],
+  //         name: "weight",
+  //         type: "STRING",
+  //         key: "item_weight",
+  //       },
+  //     },
+  //   ];
+
+  //   const items: CatalogObject[] = [
+  //     {
+  //       id: "#Chocolate Lava Mix",
+  //       type: "ITEM",
+  //       customAttributeValues: {
+  //         item_weight: {
+  //           key: "item_weight",
+  //           type: "STRING",
+  //           name: "weight",
+  //           stringValue: "150",
+  //         },
+  //         item_unit: {
+  //           key: "item_unit",
+  //           type: "STRING",
+  //           name: "unit",
+  //           stringValue: "g",
+  //         },
+  //       },
+  //       itemData: {
+  //         name: "Koana Speciality Med-Dark Roast",
+  //         description: "Koana House Roasted Med-Dark Ka'u coffee",
+  //         variations: [
+  //           {
+  //             type: "ITEM_VARIATION",
+  //             id: "#med-Dark-Roast",
+  //             itemVariationData: {
+  //               imageIds: [],
+  //               name: "Regular",
+  //               priceMoney: {
+  //                 amount: 3000n,
+  //                 currency: "USD",
+  //               },
+  //             },
+  //           },
+  //         ],
+  //       },
+  //     },
+  //   ];
+  //   const batchUpsertCatalogObjectsRequest: BatchUpsertCatalogObjectsRequest = {
+  //     idempotencyKey: uuidv4(),
+  //     batches: [
+  //       {
+  //         objects: [...customAttributes, ...items],
+  //       },
+  //     ],
+  //   };
+  //   try {
+  //     const result = await this.catalogApi.batchUpsertCatalogObjects(
+  //       batchUpsertCatalogObjectsRequest
+  //     );
+  //     console.log(result);
+  //   } catch (error) {
+  //     console.log("error", error);
+  //   }
+  // }
 }
 
 export default CatalogServices;

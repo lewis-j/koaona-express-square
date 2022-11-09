@@ -5,7 +5,8 @@ import SquareClient from "./square.client";
 import { Client } from "square";
 
 const square = new SquareClient();
-const { inventoryApi, ordersApi, catalogApi } = square.client;
+const { inventoryApi, ordersApi, catalogApi, paymentsApi, checkoutApi } =
+  square.client;
 const ApiErrorHandler = square.ApiErrorHandler;
 const app = new App(
   [
@@ -14,7 +15,12 @@ const app = new App(
       inventoryApi,
       ApiErrorHandler,
     }),
-    new CartController({ ordersApi, ApiErrorHandler }),
+    new CartController({
+      ordersApi,
+      paymentsApi,
+      checkoutApi,
+      ApiErrorHandler,
+    }),
   ],
   5000
 );

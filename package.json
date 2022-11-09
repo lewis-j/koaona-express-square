@@ -1,6 +1,7 @@
 {
   "name": "squareapi",
   "version": "1.0.0",
+  "type": "module",
   "description": "api for processing square payements on the koana coffee website",
   "main": "index.js",
   "scripts": {

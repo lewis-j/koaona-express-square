@@ -1,0 +1,6 @@
+//render.com confguration
+Add "type":"module" to package.json
+
+Build command: npm ci; npm run build
+
+Start Command: npm run start

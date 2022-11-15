@@ -7,7 +7,6 @@ var corsOptions = {
     const whitelist = [process.env.WHITELIST_URL];
 
     if (whitelist.indexOf(origin) !== -1) {
-      console.log("did not make whitelist");
       callback(null, true);
     } else {
       console.log("error");

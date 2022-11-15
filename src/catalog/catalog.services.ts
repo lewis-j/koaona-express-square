@@ -42,10 +42,6 @@ class CatalogServices {
         "ITEM,IMAGE,CATEGORY"
       );
 
-      const itemData = res.result.objects.map((item) => {
-        return item.itemData;
-      });
-
       const {
         ITEM: items,
         IMAGE: images,

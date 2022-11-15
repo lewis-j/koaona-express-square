@@ -19,6 +19,7 @@ const app = new App(
       ordersApi,
       paymentsApi,
       checkoutApi,
+      inventoryApi,
       ApiErrorHandler,
     }),
   ],

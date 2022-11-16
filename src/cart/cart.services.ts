@@ -97,45 +97,17 @@ class CartServices {
       console.error(error);
     }
   };
-  public async createOrder(lineItems, locationId) {
-    // const order: CreateOrderRequest = {
-    //   order: {
-    //     locationId: locationId,
-    //     lineItems,
-    //     state: "DRAFT",
-    //     pricingOptions: { autoApplyTaxes: true },
-    //     serviceCharges: [
-    //       {
-    //         amountMoney: {
-    //           amount: BigInt(process.env.SHIPPING_AMOUNT),
-    //           currency: "USD",
-    //         },
-    //         name: "Shipping",
-    //         calculationPhase: "TOTAL_PHASE",
-    //       },
-    //     ],
-    //   },
-    // };
-
+  public async createOrder(lineItem, locationId) {
     const createPaymentLinkRequest = this.createPaymentLinkRequest(
-      lineItems,
+      lineItem,
       locationId
     );
-
-    // const { result } = await this.ordersApi.createOrder(order);
 
     const { result } = await this.checkoutApi.createPaymentLink(
       createPaymentLinkRequest
     );
-    console.log("result from payment link", result);
-    // await this.cancelOrder(orderId, locationId);
     const order = result.relatedResources.orders[0];
     const cart = await this.parseOrder(order);
-    console.log("order==========", order);
-    console.log("return object", {
-      cart,
-      linkId: result.paymentLink.id,
-    });
     return {
       order: {
         orderId: order.id,
@@ -144,10 +116,8 @@ class CartServices {
       },
       cart,
     };
-
-    // return this.parseOrder(result.order);
   }
-  public async updateOrderItems(orderId, lineItems, locationId) {
+  public async updateOrder(orderId, lineItems, locationId) {
     try {
       const version = await this.getOrderVersion(orderId);
       const orderUpdate: UpdateOrderRequest = {
@@ -164,16 +134,34 @@ class CartServices {
       console.error(error);
     }
   }
-  public async updateItemQuantities(orderId, lineItems, locationId) {
+
+  public async clearItems(orderId, lineItems, locationId) {
     try {
       const version = await this.getOrderVersion(orderId);
+      const {
+        result: { order: previousOrder },
+      } = await this.ordersApi.retrieveOrder(orderId);
+      const previousOrderUids = previousOrder.lineItems.map(({ uid }) => uid);
+
+      const lineItemstoDelete = previousOrderUids.filter(
+        (uid) => !lineItems.some((item) => item.uid === uid)
+      );
+
+      const formatLineItemstoDelete = lineItemstoDelete.map(
+        (uid) => `line_items[${uid}]`
+      );
+
       const orderUpdate: UpdateOrderRequest = {
         order: {
           version,
           locationId,
-          lineItems,
         },
+        fieldsToClear: formatLineItemstoDelete,
       };
+      console.log(
+        "formatLineItemstoDelete================================================",
+        formatLineItemstoDelete
+      );
       const { result } = await this.ordersApi.updateOrder(orderId, orderUpdate);
       return await this.parseOrder(result.order);
     } catch (error) {
@@ -181,27 +169,7 @@ class CartServices {
       console.error(error);
     }
   }
-  // public async addShippingFulfillment(orderId, locationId, customerDetails) {
-  //   // const { version, orderId } = squareDetails;
-  //   const shippingFulfillment =
-  //     this.fulfillmentObjectFromShippingDetails(customerDetails);
 
-  //   try {
-  //     const version = await this.getOrderVersion(orderId);
-  //     const orderUpdate: UpdateOrderRequest = {
-  //       order: {
-  //         version,
-  //         locationId,
-  //         fulfillments: [shippingFulfillment],
-  //       },
-  //     };
-  //     const { result } = await this.ordersApi.updateOrder(orderId, orderUpdate);
-  //     return this.parseOrder(result.order);
-  //   } catch (error) {
-  //     this.apiErrorHandler(error);
-  //     console.error(error);
-  //   }
-  // }
   public async cancelOrder(orderId, locationId) {
     try {
       const version = await this.getOrderVersion(orderId);
@@ -215,44 +183,7 @@ class CartServices {
       return await this.ordersApi.updateOrder(orderId, orderUpdate);
     } catch (error) {}
   }
-  // public async processOrder(orderId, token: string, amount) {
-  //   // const paymentRequest: CreatePaymentRequest = {
-  //   //   sourceId: token,
-  //   //   idempotencyKey: uuidv4(),
-  //   //   amountMoney: {
-  //   //     amount: amount,
-  //   //     currency: "USD"
-  //   //   },
-  //   //   orderId: orderId
-  //   // }
-  //   // try {
-  //   //   //TODO: call paymentApi endpoint with appropriate data
-  //   //   this.paymentsApi.createPayment(paymentRequest);
-  //   //   this.paymentsApi.
-  //   // } catch (error) {
-  //   //   console.log(error);
-  //   // }
-  // }
-  // public async prepareOrderProccessing(orderId, address, locationId) {
-  //   // const { version, orderId } = squareDetails;
-  //   // const orderUpdate = {
-  //   //   order: {
-  //   //     version,
-  //   //     locationId,
-  //   //     lineItems,
-  //   //   },
-  //   // };
-  //   // try {
-  //   //   const updatedOrder = await this.ordersApi.updateOrder(
-  //   //     orderId,
-  //   //     orderUpdate
-  //   //   );
-  //   //   return updatedOrder;
-  //   // } catch (error) {
-  //   //   this.apiErrorHandler(error);
-  //   //   console.error(error);
-  //   // }
-  // }
+
   public async draftAllOrders(locationId) {
     const orders = await this.ordersApi.searchOrders({
       locationIds: [locationId],
@@ -270,35 +201,7 @@ class CartServices {
     return await Promise.all(orderResults);
   }
 
-  private fulfillmentObjectFromShippingDetails(shipping) {
-    const shippingFulfillment: OrderFulfillment = {
-      type: "SHIPMENT",
-      state: "PROPOSED",
-      shipmentDetails: {
-        carrier: "FedEx",
-        shippingType: "2 Day USA",
-        recipient: {
-          displayName: `${shipping.firstName} ${shipping.lastName}`,
-          emailAddress: shipping.email,
-          phoneNumber: shipping.phone,
-          address: {
-            addressLine1: shipping.addressLine1,
-            addressLine2: shipping.addressLine2,
-            locality: shipping.city,
-            administrativeDistrictLevel1: shipping.region,
-            country: shipping.country,
-            postalCode: shipping.postalCode,
-            firstName: shipping.firstName,
-            lastName: shipping.lastName,
-          },
-        },
-      },
-    };
-
-    return shippingFulfillment;
-  }
-
-  private createPaymentLinkRequest(lineItems, locationId) {
+  private createPaymentLinkRequest(lineItem, locationId) {
     const createPaymentLinkRequest: CreatePaymentLinkRequest = {
       idempotencyKey: uuidv4(),
       checkoutOptions: {
@@ -306,7 +209,7 @@ class CartServices {
       },
       order: {
         locationId: locationId,
-        lineItems,
+        lineItems: [lineItem],
         state: "DRAFT",
         pricingOptions: { autoApplyTaxes: true },
         serviceCharges: [
@@ -369,3 +272,91 @@ class CartServices {
 }
 
 export default CartServices;
+
+// private fulfillmentObjectFromShippingDetails(shipping) {
+//   const shippingFulfillment: OrderFulfillment = {
+//     type: "SHIPMENT",
+//     state: "PROPOSED",
+//     shipmentDetails: {
+//       carrier: "FedEx",
+//       shippingType: "2 Day USA",
+//       recipient: {
+//         displayName: `${shipping.firstName} ${shipping.lastName}`,
+//         emailAddress: shipping.email,
+//         phoneNumber: shipping.phone,
+//         address: {
+//           addressLine1: shipping.addressLine1,
+//           addressLine2: shipping.addressLine2,
+//           locality: shipping.city,
+//           administrativeDistrictLevel1: shipping.region,
+//           country: shipping.country,
+//           postalCode: shipping.postalCode,
+//           firstName: shipping.firstName,
+//           lastName: shipping.lastName,
+//         },
+//       },
+//     },
+//   };
+
+//   return shippingFulfillment;
+// }
+// public async addShippingFulfillment(orderId, locationId, customerDetails) {
+//   // const { version, orderId } = squareDetails;
+//   const shippingFulfillment =
+//     this.fulfillmentObjectFromShippingDetails(customerDetails);
+
+//   try {
+//     const version = await this.getOrderVersion(orderId);
+//     const orderUpdate: UpdateOrderRequest = {
+//       order: {
+//         version,
+//         locationId,
+//         fulfillments: [shippingFulfillment],
+//       },
+//     };
+//     const { result } = await this.ordersApi.updateOrder(orderId, orderUpdate);
+//     return this.parseOrder(result.order);
+//   } catch (error) {
+//     this.apiErrorHandler(error);
+//     console.error(error);
+//   }
+// }
+
+// public async processOrder(orderId, token: string, amount) {
+//   // const paymentRequest: CreatePaymentRequest = {
+//   //   sourceId: token,
+//   //   idempotencyKey: uuidv4(),
+//   //   amountMoney: {
+//   //     amount: amount,
+//   //     currency: "USD"
+//   //   },
+//   //   orderId: orderId
+//   // }
+//   // try {
+//   //   //TODO: call paymentApi endpoint with appropriate data
+//   //   this.paymentsApi.createPayment(paymentRequest);
+//   //   this.paymentsApi.
+//   // } catch (error) {
+//   //   console.log(error);
+//   // }
+// }
+// public async prepareOrderProccessing(orderId, address, locationId) {
+//   // const { version, orderId } = squareDetails;
+//   // const orderUpdate = {
+//   //   order: {
+//   //     version,
+//   //     locationId,
+//   //     lineItems,
+//   //   },
+//   // };
+//   // try {
+//   //   const updatedOrder = await this.ordersApi.updateOrder(
+//   //     orderId,
+//   //     orderUpdate
+//   //   );
+//   //   return updatedOrder;
+//   // } catch (error) {
+//   //   this.apiErrorHandler(error);
+//   //   console.error(error);
+//   // }
+// }

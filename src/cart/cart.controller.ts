@@ -22,10 +22,13 @@ class CartController {
     this.router
       .route(this.path)
       .get(this.squareOrderParser, this.getOrder)
-      .put(this.squareOrderParser, this.update);
+      .put(this.squareOrderParser, this.upsertOrder);
     this.router
-      .route(`${this.path}/update/quantity`)
+      .route(`${this.path}/quantities`)
       .put(this.squareOrderParser, this.updateQuantities);
+    this.router
+      .route(`${this.path}/clearItems`)
+      .put(this.squareOrderParser, this.clearItems);
     this.router.route(`${this.path}/cancel`).put(this.cancel);
   }
   private createCookie(res: express.Response, squareCred) {
@@ -42,7 +45,6 @@ class CartController {
     const _order = { cart, order };
     this.serializeAndSendResponse(response, _order);
   }
-
   private selectOrder = ({ body, cookies }) => {
     console.log("body", body, "cookie", cookies[this.squareCookie]);
     const squareOrderId = cookies[this.squareCookie];
@@ -78,24 +80,23 @@ class CartController {
       this.serializeAndSendResponse(response, squareResponse);
     }
   };
-  private update = async (
+  private upsertOrder = async (
     request: RequestWithSquareOrder,
     response: express.Response,
     next
   ) => {
-    const lineItems = request.body.lineItems;
+    const lineItem = request.body.lineItem;
     if (request.squareOrderId) {
       const orderId = request.squareOrderId;
-      const order = await this.cartService.updateOrderItems(
+      const order = await this.cartService.updateOrder(
         orderId,
-        lineItems,
+        [lineItem],
         this.locationId
       );
       this.serializeAndSendResponse(response, order);
     } else {
-      console.log("creating order", lineItems);
       const squareResponse = await this.cartService.createOrder(
-        lineItems,
+        lineItem,
         this.locationId
       );
       this.setCookieAndSendResponse(response, squareResponse);
@@ -107,32 +108,28 @@ class CartController {
   ) => {
     const lineItems = request.body.lineItems;
     const orderId = request.squareOrderId;
-    const order = await this.cartService.updateItemQuantities(
+    const order = await this.cartService.updateOrder(
       orderId,
       lineItems,
       this.locationId
     );
     this.serializeAndSendResponse(response, order);
   };
+  private clearItems = async (
+    request: RequestWithSquareOrder,
+    response: express.Response
+  ) => {
+    const lineItems = request.body.lineItems;
+    const orderId = request.squareOrderId;
+    const order = await this.cartService.clearItems(
+      orderId,
+      lineItems,
+      this.locationId
+    );
+    console.log("items returned in clearItems", order);
+    this.serializeAndSendResponse(response, order);
+  };
 
-  // private paymentLink = async (
-  //   request: RequestWithSquareOrder,
-  //   response: express.Response
-  // ) => {
-  //   if (request.squareOrderId) {
-  //     // const { customerDetails } = request.body;
-  //     const orderId = request.squareOrderId;
-  //     const { link, order, linkId } = await this.cartService.createPaymentLink(
-  //       orderId
-  //       // customerDetails
-  //     );
-  //     this.setCookieAndSendResponse(response, order);
-
-  //     // response.send(link);
-  //   } else {
-  //     response.end();
-  //   }
-  // };
   private cancel = async (
     request: RequestWithSquareOrder,
     response: express.Response
@@ -148,6 +145,24 @@ class CartController {
 
 export default CartController;
 
+// private paymentLink = async (
+//   request: RequestWithSquareOrder,
+//   response: express.Response
+// ) => {
+//   if (request.squareOrderId) {
+//     // const { customerDetails } = request.body;
+//     const orderId = request.squareOrderId;
+//     const { link, order, linkId } = await this.cartService.createPaymentLink(
+//       orderId
+//       // customerDetails
+//     );
+//     this.setCookieAndSendResponse(response, order);
+
+//     // response.send(link);
+//   } else {
+//     response.end();
+//   }
+// };
 // private changeQuantity = async (
 //   request: RequestWithSquareOrder,
 //   response: express.Response,

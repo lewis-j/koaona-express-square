@@ -72,7 +72,12 @@ class CartServices {
   public getOrder = async (orderId, linkId) => {
     try {
       const { result } = await this.ordersApi.retrieveOrder(orderId);
-      if (result.order.state === orderState.CANCELED) {
+      console.log(
+        "order state ---------------------------------------------------",
+        result.order.state === orderState.OPEN,
+        result.order.state
+      );
+      if (result.order.state === orderState.OPEN) {
         return null;
       }
 
@@ -80,7 +85,7 @@ class CartServices {
 
       console.log(
         "result============================================================",
-        res.result.paymentLink.url
+        result.order
       );
 
       const cart = await this.parseOrder(result.order);
@@ -135,19 +140,19 @@ class CartServices {
     }
   }
 
-  public async clearItems(orderId, lineItems, locationId) {
+  public async clearItems(orderId, lineItems, deletions, locationId) {
     try {
       const version = await this.getOrderVersion(orderId);
-      const {
-        result: { order: previousOrder },
-      } = await this.ordersApi.retrieveOrder(orderId);
-      const previousOrderUids = previousOrder.lineItems.map(({ uid }) => uid);
+      // const {
+      //   result: { order: previousOrder },
+      // } = await this.ordersApi.retrieveOrder(orderId);
+      // const previousOrderUids = previousOrder.lineItems.map(({ uid }) => uid);
 
-      const lineItemstoDelete = previousOrderUids.filter(
-        (uid) => !lineItems.some((item) => item.uid === uid)
-      );
+      // const lineItemstoDelete = previousOrderUids.filter(
+      //   (uid) => !lineItems.some((item) => item.uid === uid)
+      // );
 
-      const formatLineItemstoDelete = lineItemstoDelete.map(
+      const formatLineItemstoDelete = deletions.map(
         (uid) => `line_items[${uid}]`
       );
 
@@ -155,6 +160,7 @@ class CartServices {
         order: {
           version,
           locationId,
+          lineItems,
         },
         fieldsToClear: formatLineItemstoDelete,
       };

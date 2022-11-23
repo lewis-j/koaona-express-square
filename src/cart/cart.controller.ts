@@ -77,7 +77,12 @@ class CartController {
       response.end();
     } else {
       const squareResponse = await this.cartService.getOrder(orderId, linkId);
-      this.serializeAndSendResponse(response, squareResponse);
+      if (!squareResponse) {
+        response.clearCookie(this.squareCookie);
+        response.end();
+      } else {
+        this.serializeAndSendResponse(response, squareResponse);
+      }
     }
   };
   private upsertOrder = async (
@@ -119,11 +124,12 @@ class CartController {
     request: RequestWithSquareOrder,
     response: express.Response
   ) => {
-    const lineItems = request.body.lineItems;
+    const { lineItems, deletions } = request.body;
     const orderId = request.squareOrderId;
     const order = await this.cartService.clearItems(
       orderId,
       lineItems,
+      deletions,
       this.locationId
     );
     console.log("items returned in clearItems", order);

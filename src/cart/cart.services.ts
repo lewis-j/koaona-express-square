@@ -42,6 +42,8 @@ class CartServices {
     }
   };
   private mapOrderReducer = async (order) => {
+    console.log("order in mapreducer", order);
+    if (!order?.lineItems) return { items: [], netAmounts: order.netAmounts };
     const items = order.lineItems.map(async (item) => {
       const { result } = await this.inventoryApi.retrieveInventoryCount(
         item.catalogObjectId
@@ -74,6 +76,7 @@ class CartServices {
       const { result } = await this.ordersApi.retrieveOrder(orderId);
       console.log(
         "order state ---------------------------------------------------",
+        linkId,
         result.order.state === orderState.OPEN,
         result.order.state
       );
@@ -85,7 +88,7 @@ class CartServices {
 
       console.log(
         "result============================================================",
-        result.order
+        res
       );
 
       const cart = await this.parseOrder(result.order);
@@ -143,27 +146,30 @@ class CartServices {
   public async clearItems(orderId, lineItems, deletions, locationId) {
     try {
       const version = await this.getOrderVersion(orderId);
-      // const {
-      //   result: { order: previousOrder },
-      // } = await this.ordersApi.retrieveOrder(orderId);
-      // const previousOrderUids = previousOrder.lineItems.map(({ uid }) => uid);
-
-      // const lineItemstoDelete = previousOrderUids.filter(
-      //   (uid) => !lineItems.some((item) => item.uid === uid)
-      // );
 
       const formatLineItemstoDelete = deletions.map(
         (uid) => `line_items[${uid}]`
       );
 
-      const orderUpdate: UpdateOrderRequest = {
-        order: {
-          version,
-          locationId,
-          lineItems,
-        },
-        fieldsToClear: formatLineItemstoDelete,
-      };
+      console.log("lineItems in clear items================", lineItems);
+
+      const orderUpdate: UpdateOrderRequest =
+        lineItems.length > 0
+          ? {
+              order: {
+                version,
+                locationId,
+                lineItems,
+              },
+              fieldsToClear: formatLineItemstoDelete,
+            }
+          : {
+              order: {
+                version,
+                locationId,
+              },
+              fieldsToClear: formatLineItemstoDelete,
+            };
       console.log(
         "formatLineItemstoDelete================================================",
         formatLineItemstoDelete

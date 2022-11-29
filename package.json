@@ -9,6 +9,7 @@
     "dev": "nodemon ./src/server.ts",
     "start": "node --es-module-specifier-resolution=node ./dist/server.js "
   },
+  "type": "module",
   "author": "Lindsey Jackson",
   "license": "ISC",
   "dependencies": {

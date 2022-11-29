@@ -1,9 +1,7 @@
 import {
   OrdersApi,
   PaymentsApi,
-  CreateOrderRequest,
   UpdateOrderRequest,
-  OrderFulfillment,
   CheckoutApi,
   CreatePaymentLinkRequest,
   InventoryApi,
@@ -35,14 +33,13 @@ class CartServices {
   private getOrderVersion = async (orderId) => {
     try {
       const { result } = await this.ordersApi.retrieveOrder(orderId);
-      console.log("Version::::::::", result.order.version);
+
       return result.order.version;
     } catch (error) {
       console.error(error);
     }
   };
   private mapOrderReducer = async (order) => {
-    console.log("order in mapreducer", order);
     if (!order?.lineItems) return { items: [], netAmounts: order.netAmounts };
     const items = order.lineItems.map(async (item) => {
       const { result } = await this.inventoryApi.retrieveInventoryCount(
@@ -56,10 +53,7 @@ class CartServices {
         inventory: result.counts[0].quantity,
       };
     });
-    console.log("parsed order", {
-      items: await Promise.all(items),
-      netAmounts: order.netAmounts,
-    });
+
     return {
       items: await Promise.all(items),
       netAmounts: order.netAmounts,
@@ -74,22 +68,12 @@ class CartServices {
   public getOrder = async (orderId, linkId) => {
     try {
       const { result } = await this.ordersApi.retrieveOrder(orderId);
-      console.log(
-        "order state ---------------------------------------------------",
-        linkId,
-        result.order.state === orderState.OPEN,
-        result.order.state
-      );
+
       if (result.order.state === orderState.OPEN) {
         return null;
       }
 
       const res = await this.checkoutApi.retrievePaymentLink(linkId);
-
-      console.log(
-        "result============================================================",
-        res
-      );
 
       const cart = await this.parseOrder(result.order);
 
@@ -151,8 +135,6 @@ class CartServices {
         (uid) => `line_items[${uid}]`
       );
 
-      console.log("lineItems in clear items================", lineItems);
-
       const orderUpdate: UpdateOrderRequest =
         lineItems.length > 0
           ? {
@@ -170,10 +152,7 @@ class CartServices {
               },
               fieldsToClear: formatLineItemstoDelete,
             };
-      console.log(
-        "formatLineItemstoDelete================================================",
-        formatLineItemstoDelete
-      );
+
       const { result } = await this.ordersApi.updateOrder(orderId, orderUpdate);
       return await this.parseOrder(result.order);
     } catch (error) {
@@ -212,11 +191,42 @@ class CartServices {
     });
     return await Promise.all(orderResults);
   }
+  public async retrieveOrderConfirmation(orderId) {
+    const { result: orderResult } = await this.ordersApi.retrieveOrder(orderId);
+    const { fulfillments, netAmounts, lineItems, tenders } = orderResult.order;
 
+    const { result: paymentResult } = await this.paymentsApi.getPayment(
+      tenders[0].paymentId
+    );
+
+    const {
+      payment: { receiptUrl },
+    } = paymentResult;
+
+    const _lineItems = lineItems.map((lineItem) => {
+      return {
+        name: lineItem.name,
+        quantity: lineItem.quantity,
+        id: lineItem.catalogObjectId,
+        amountTotal: lineItem.grossSalesMoney,
+      };
+    });
+    const confirmationInfo = {
+      lineItems: _lineItems,
+      shipping: fulfillments[0].shipmentDetails,
+      netAmounts,
+      createdAt: tenders[0].createdAt,
+      amount: tenders[0].amountMoney,
+      receiptUrl,
+    };
+
+    return confirmationInfo;
+  }
   private createPaymentLinkRequest(lineItem, locationId) {
     const createPaymentLinkRequest: CreatePaymentLinkRequest = {
       idempotencyKey: uuidv4(),
       checkoutOptions: {
+        redirectUrl: `${process.env.WHITELIST_URL}/confirmation`,
         askForShippingAddress: true,
       },
       order: {
@@ -236,6 +246,21 @@ class CartServices {
         ],
       },
     };
+    if (process.env.ENVIRONMENT === "SANDBOX") {
+      createPaymentLinkRequest.prePopulatedData = {
+        buyerAddress: {
+          addressLine1: "po box 111",
+          locality: "koana",
+          administrativeDistrictLevel1: "CA",
+          postalCode: "21562",
+          country: "US",
+          firstName: "John",
+          lastName: "DoeDoe",
+        },
+        buyerEmail: "testing@testing.com",
+        buyerPhoneNumber: "17077757855",
+      };
+    }
 
     return createPaymentLinkRequest;
   }
@@ -262,15 +287,8 @@ class CartServices {
       const { result } = await this.checkoutApi.createPaymentLink(
         createPaymentLinkRequest
       );
-      console.log("result from payment link", result);
       // await this.cancelOrder(orderId, locationId);
       const order = await this.parseOrder(result.relatedResources.orders[0]);
-      console.log("order", order);
-      console.log("return object", {
-        link: result.paymentLink.url,
-        order,
-        linkId: result.paymentLink.id,
-      });
       return {
         link: result.paymentLink.url,
         order,

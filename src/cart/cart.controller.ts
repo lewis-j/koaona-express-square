@@ -29,6 +29,9 @@ class CartController {
     this.router
       .route(`${this.path}/clearItems`)
       .put(this.squareOrderParser, this.clearItems);
+    this.router
+      .route(`${this.path}/confirmation`)
+      .get(this.fetchOrderConfirmation);
     this.router.route(`${this.path}/cancel`).put(this.cancel);
   }
   private createCookie(res: express.Response, squareCred) {
@@ -46,7 +49,6 @@ class CartController {
     this.serializeAndSendResponse(response, _order);
   }
   private selectOrder = ({ body, cookies }) => {
-    console.log("body", body, "cookie", cookies[this.squareCookie]);
     const squareOrderId = cookies[this.squareCookie];
     if (squareOrderId) return squareOrderId;
     if (body.orderId) return body.orderId;
@@ -72,7 +74,6 @@ class CartController {
   ) => {
     const orderId = request.squareOrderId;
     const linkId = request.squareLinkId;
-    console.log("orderId", orderId);
     if (!orderId) {
       response.end();
     } else {
@@ -132,8 +133,20 @@ class CartController {
       deletions,
       this.locationId
     );
-    console.log("items returned in clearItems", order);
     this.serializeAndSendResponse(response, order);
+  };
+  private fetchOrderConfirmation = async (
+    request: express.Request,
+    response: express.Response
+  ) => {
+    const orderId = request.query.orderId;
+
+    if (orderId) {
+      const result = await this.cartService.retrieveOrderConfirmation(orderId);
+      this.serializeAndSendResponse(response, result);
+    } else {
+      response.end();
+    }
   };
 
   private cancel = async (
